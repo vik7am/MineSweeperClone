@@ -62,6 +62,7 @@ class MineSweeper{
     bool minesGenerated;
     bool gameOver;
     public:
+    int hiddenCells = 71;
     MineSweeper(){
         for(int i=0; i<ROW_SIZE; i++)
             for(int j=0; j<COLUMN_SIZE; j++)
@@ -72,7 +73,7 @@ class MineSweeper{
     void makeMove(int row, int col){
         if(!minesGenerated){
             mineBoard.generateMines(row, col);
-            mineBoard.printMineBoard();
+            //mineBoard.printMineBoard();
             minesGenerated = true;
         }
         else if(mineBoard.isMine(row, col)){
@@ -82,14 +83,13 @@ class MineSweeper{
         revealLocation(row, col);
     }
     void revealLocation(int row, int col){
-        //cout << "row:" << row << " col:" << col << endl;
-        if(board[row][col] != '-')
+        if(board[row][col] != '-' && board[row][col] != '+')
             return;
         int mines = mineBoard.adjacentMines(row, col);
-        //cout << "Mines found: " << mines << endl;
-        //board[row][col] = '0' + mines;
+        hiddenCells--;
         if(mines){
             board[row][col] = '0' + mines;
+            
             return;
         }
         board[row][col] = ' ';
@@ -102,10 +102,10 @@ class MineSweeper{
             }
     }
     void printBoard(){
-        cout << "    0 1 2 3 4 5 6 7 8\n";
+        cout << "    1 2 3 4 5 6 7 8 9\n";
         cout << "    _ _ _ _ _ _ _ _ _\n";
         for(int i=0; i<ROW_SIZE; i++){
-            cout << i << " | ";
+            cout << i+1 << " | ";
             for(int j=0; j<COLUMN_SIZE; j++){
                 cout << board[i][j] << " ";
             }
@@ -125,11 +125,17 @@ class MineSweeper{
         mineBoard.generateMines(0,0);
         mineBoard.printMineBoard();
     }
+    void placeFlag(int row, int col){
+        if(board[row][col] == '-')
+            board[row][col] = '+';
+        else if(board[row][col] == '+')
+            board[row][col] = '-';
+    }
 };
 
 class GameManager{
     bool gameOver;
-    int row, col;
+    int row, col, choice;
     MineSweeper mineSweeper;
     public:
     void startGame(){
@@ -142,12 +148,22 @@ class GameManager{
         while(!gameOver){
             cout << "Enter Row and Column: ";
             cin >> row >> col;
-            if(!validLocation(row, col)){
+            if(validLocation(row-1, col-1)){
+                mineSweeper.makeMove(row-1, col-1);
+                mineSweeper.printBoard();
+            }
+            else if(validLocation(-row-1, -col-1)){
+                mineSweeper.placeFlag(-row-1, -col-1);
+                mineSweeper.printBoard();
+            }
+            else{
                 cout << "Invalid Row or Column!\n";
                 continue;
             }
-            mineSweeper.makeMove(row, col);
-            mineSweeper.printBoard();
+            if(mineSweeper.hiddenCells <=0){
+                cout << "You Won!\n";
+                break;
+            }
             gameOver = mineSweeper.isGameOver();
         }
     }

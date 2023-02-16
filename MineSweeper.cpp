@@ -3,6 +3,8 @@ using namespace std;
 #define ROW_SIZE 9
 #define COLUMN_SIZE 9
 #define NO_OF_MINES 10
+#define HIDDEN_CELL '-'
+#define FLAGGED_CELL '#'
 
 class Utils{
     public:
@@ -71,7 +73,7 @@ class MineSweeper : Utils{
         hiddenCells = (ROW_SIZE * COLUMN_SIZE) - NO_OF_MINES;
         for(int i=0; i<ROW_SIZE; i++)
             for(int j=0; j<COLUMN_SIZE; j++)
-                board[i][j] = '-';
+                board[i][j] = HIDDEN_CELL;
     }
 
     bool isGameLost(){
@@ -87,7 +89,7 @@ class MineSweeper : Utils{
             mineBoard.generateMines(row, col);
             minesGenerated = true;
         }
-        else if(board[row][col] == 'F'){
+        else if(board[row][col] == FLAGGED_CELL){
             cout << "Remove Flag to open cell!\n";
             return;
         }
@@ -99,7 +101,7 @@ class MineSweeper : Utils{
     }
 
     void openCell(int row, int col){
-        if(board[row][col] != '-' && board[row][col] != 'F')
+        if(board[row][col] != HIDDEN_CELL && board[row][col] != FLAGGED_CELL)
             return;
         int adjacentMines = mineBoard.getAdjacentMines(row, col);
         hiddenCells--;
@@ -118,10 +120,10 @@ class MineSweeper : Utils{
     }
 
     void placeFlag(int row, int col){
-        if(board[row][col] == '-')
-            board[row][col] = 'F';
-        else if(board[row][col] == 'F')
-            board[row][col] = '-';
+        if(board[row][col] == HIDDEN_CELL)
+            board[row][col] = FLAGGED_CELL;
+        else if(board[row][col] == FLAGGED_CELL)
+            board[row][col] = HIDDEN_CELL;
     }
 
     void showAllMines(){
@@ -133,14 +135,14 @@ class MineSweeper : Utils{
 
     void printBoard(){
         cout << "\n    1 2 3 4 5 6 7 8 9\n";
-        cout << "   ===================\n";
+        cout << "  =====================\n";
         for(int i=0; i<ROW_SIZE; i++){
             cout << i+1 << " | ";
             for(int j=0; j<COLUMN_SIZE; j++)
                 cout << board[i][j] << " ";
-            cout << "|"<< endl;
+            cout << "|" << endl;
         }
-        cout << "   ===================\n";
+        cout << "  =====================\n";
     }
 };
 
@@ -153,11 +155,11 @@ class GameManager : Utils{
     void startGame(){
         do{
             cout << "\nWelcome to MineSweeper\n";
-            cout << "1. Start New Game\n2. Rules\n3. Exit\nYour Choice: ";
+            cout << "1. Start New Game\n2. Rules and Info\n3. Exit\nYour Choice: ";
             cin >> choice;
             switch(choice){
                 case 1: startGameLoop(); break;
-                case 2: break;
+                case 2: showRulesAndInfo(); break;
                 case 3: break;
                 default: cout << "Invalid Option!\n";
             }
@@ -169,7 +171,7 @@ class GameManager : Utils{
         mineSweeper.printBoard();
         gameOver = false;
         while(!gameOver){
-            cout << "Enter Row and Column: ";
+            cout << "Enter Row and Column number: ";
             cin >> row >> col;
             if(validLocation(row-1, col-1))
                 mineSweeper.makeMove(row-1, col-1);
@@ -194,6 +196,20 @@ class GameManager : Utils{
             cout << "You Lost!\n";
         }
         cout << "Press any key to continue.. ";
+        cin >> choice;
+    }
+
+    void showRulesAndInfo(){
+        cout << "\n   Rules\n";
+        cout << "1. The board is divided into cells, with mines randomly distributed.\n";
+        cout << "2. To win, you need to open all the cells.\n";
+        cout << "3. The number on a cell shows the number of mines adjacent to it. Using this information, you can determine cells that are safe, and cells that contain mines.\n";
+        cout << "4. Interact, evolve and enjoy!\n";
+
+        cout << "\n   How to Play\n";
+        cout << "1. Player will Input the row and column of the cell which they want to open.\n";
+        cout << "2. Player can place or remove flags on hidden cells by adding a (-) sign to row and column values.\n";
+        cout << "\nPress any key to continue..";
         cin >> choice;
     }
 };

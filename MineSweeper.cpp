@@ -6,39 +6,64 @@ using namespace std;
 #define HIDDEN_CELL '-'
 #define FLAGGED_CELL '#'
 
-class Utils{
+
+bool validLocation(int row, int col){
+    if(row>=0 && col>=0 && row<ROW_SIZE && col<COLUMN_SIZE)
+        return true;
+    return false;
+}
+
+enum CellState{HIDDEN, FLAGGED, VISIBLE};
+enum CellContents{UNKNOWN, EMPTY, NUMBER, MINE};
+class Cell{
     public:
-    bool validLocation(int row, int col){
+    CellState state;
+    CellContents contents;
+    void reset(){
+        state = HIDDEN;
+        contents = UNKNOWN;
+    }
+};
+
+class Board{
+    public:
+    Cell cell[ROW_SIZE][COLUMN_SIZE];
+    void resetBoard(){
+        for(int i=0; i< ROW_SIZE; i++)
+            for(int j=0; j< COLUMN_SIZE; j++)
+                cell[i][j].reset();
+    }
+    bool isValidLocation(int row, int col){
         if(row>=0 && col>=0 && row<ROW_SIZE && col<COLUMN_SIZE)
             return true;
         return false;
     }
 };
 
-class MineBoard : Utils{
-    bool mine[ROW_SIZE][COLUMN_SIZE];
+class MineBoard{
+    Cell cell[ROW_SIZE][COLUMN_SIZE];
 
     public:
     void resetMineBoard(){
         for(int i=0; i< ROW_SIZE; i++)
             for(int j=0; j< COLUMN_SIZE; j++)
-                mine[i][j] = false;
+                cell[i][j].reset();
     }
 
     void generateMines(int row, int col){
         int count = 0;
         int i,j;
-        mine[row][col] = true;
+        cell[row][col].contents = MINE;
         srand(time(0));
         while(count < NO_OF_MINES){
             i = rand()%ROW_SIZE;
             j = rand()%COLUMN_SIZE;
-            if(mine[i][j])
+            if(cell[i][j].contents == MINE)
                 continue;
-            mine[i][j] = true;
+            cell[i][j].contents = MINE;
             count++;
         }
-        mine[row][col] = false;
+        cell[row][col].contents == MINE
     }
 
     bool isMine(int row, int col){
@@ -58,7 +83,7 @@ class MineBoard : Utils{
     }
 };
 
-class MineSweeper : Utils{
+class MineSweeper{
     MineBoard mineBoard;
     char board[ROW_SIZE][COLUMN_SIZE];
     bool minesGenerated;
@@ -146,9 +171,10 @@ class MineSweeper : Utils{
     }
 };
 
-class GameManager : Utils{
+class GameManager{
     MineSweeper mineSweeper;
     int row, col, choice;
+    string input;
     bool gameOver;
 
     public:
@@ -196,7 +222,7 @@ class GameManager : Utils{
             cout << "You Lost!\n";
         }
         cout << "Press any key to continue.. ";
-        cin >> choice;
+        cin >> input;
     }
 
     void showRulesAndInfo(){
@@ -210,7 +236,7 @@ class GameManager : Utils{
         cout << "1. Player will Input the row and column of the cell which they want to open.\n";
         cout << "2. Player can place or remove flags on hidden cells by adding a (-) sign to row and column values.\n";
         cout << "\nPress any key to continue..";
-        cin >> choice;
+        cin >> input;
     }
 };
 

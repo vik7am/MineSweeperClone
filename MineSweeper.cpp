@@ -3,102 +3,113 @@ using namespace std;
 #define ROW_SIZE 9
 #define COLUMN_SIZE 9
 #define NO_OF_MINES 10
-#define HIDDEN_CELL '-'
-#define FLAGGED_CELL '#'
+#define HIDDEN_TILE '-'
+#define FLAGGED_TILE '#'
+#define EMPTY_TILE ' '
+#define NUMBER_TILE '0'
 
 
-bool validLocation(int row, int col){
-    if(row>=0 && col>=0 && row<ROW_SIZE && col<COLUMN_SIZE)
-        return true;
-    return false;
-}
+enum TileState{HIDDEN, FLAGGED, VISIBLE};
+enum TileContent{UNKNOWN, EMPTY, NUMBER, MINE};
 
-enum CellState{HIDDEN, FLAGGED, VISIBLE};
-enum CellContents{UNKNOWN, EMPTY, NUMBER, MINE};
-class Cell{
+class Tile{
     public:
-    CellState state;
-    CellContents contents;
+    char name;
+    short adjacentMines;
+    TileState state;
+    TileContent content;
     void reset(){
         state = HIDDEN;
-        contents = UNKNOWN;
+        content = UNKNOWN;
+        name = '-';
     }
 };
 
 class Board{
     public:
-    Cell cell[ROW_SIZE][COLUMN_SIZE];
+    Tile tile[ROW_SIZE][COLUMN_SIZE];
+    
     void resetBoard(){
         for(int i=0; i< ROW_SIZE; i++)
             for(int j=0; j< COLUMN_SIZE; j++)
-                cell[i][j].reset();
+                tile[i][j].reset();
     }
-    bool isValidLocation(int row, int col){
+    /*void updateTileState(int row, int col, TileState state){
+        tile[row][col].state = state;
+        if(state == HIDDEN)
+            tile[row][col].name = HIDDEN_TILE;
+        else if(state == FLAGGED)
+            tile[row][col].name = FLAGGED_TILE;
+    }
+    void updateTileContent(int row, int col, TileContent content, int mines){
+        tile[row][col].content = content;
+        if(content == EMPTY)
+            tile[row][col].name = EMPTY_TILE;
+        else if(content == NUMBER)
+            tile[row][col].name = '0' + mines;
+        else if(content == MINE)
+            tile[row][col].name = '*';
+    }*/
+    void updateTileName(int row, int col){
+        char name = HIDDEN_TILE;
+        switch(tile[row][col].state){
+            case HIDDEN: name = HIDDEN_TILE; break;
+            case FLAGGED: name = FLAGGED_TILE; break;
+            case VISIBLE:
+                switch(tile[row][col].content){
+                    case EMPTY: name = EMPTY_TILE; break;
+                    case NUMBER: name = NUMBER_TILE+tile[row][col].adjacentMines; break;
+                    case MINE: name = '*'; break;
+                }
+        }
+        tile[row][col].name = name;
+    }
+    int adjacentTilesWithMines(int row, int col){
+        int count = 0;
+        for(int i=-1; i<=1; i++)
+            for(int j=-1; j<=1; j++){
+                if(i==0 && j==0)
+                    continue;
+                if(validLocation(row+i, col+j))
+                    if(tile[row+i][col+j].content == MINE)
+                        count++;
+            }
+        return count;
+    }
+    bool validLocation(int row, int col){
         if(row>=0 && col>=0 && row<ROW_SIZE && col<COLUMN_SIZE)
             return true;
         return false;
     }
 };
 
-class MineBoard{
-    Cell cell[ROW_SIZE][COLUMN_SIZE];
+class MineSweeper : public Board{
+    bool minesGenerated;
+    int hiddenMines;
+    int hiddenTiles;
 
     public:
-    void resetMineBoard(){
-        for(int i=0; i< ROW_SIZE; i++)
-            for(int j=0; j< COLUMN_SIZE; j++)
-                cell[i][j].reset();
+    void resetMineSweeper(){
+        resetBoard();
+        minesGenerated = false;
+        hiddenMines = NO_OF_MINES;
+        hiddenTiles = (ROW_SIZE * COLUMN_SIZE) - NO_OF_MINES;
     }
 
     void generateMines(int row, int col){
         int count = 0;
         int i,j;
-        cell[row][col].contents = MINE;
+        tile[row][col].content = MINE;
         srand(time(0));
         while(count < NO_OF_MINES){
             i = rand()%ROW_SIZE;
             j = rand()%COLUMN_SIZE;
-            if(cell[i][j].contents == MINE)
+            if(tile[i][j].content == MINE)
                 continue;
-            cell[i][j].contents = MINE;
+            tile[i][j].content = MINE;
             count++;
         }
-        cell[row][col].contents == MINE
-    }
-
-    bool isMine(int row, int col){
-        return mine[row][col];
-    }
-
-    int getAdjacentMines(int row, int col){
-        int count = 0;
-        for(int i=-1; i<=1; i++)
-            for(int j=-1; j<=1; j++){
-                if(i==0 && j==0)
-                    continue;
-                if(validLocation(row+i, col+j) && isMine(row+i, col+j))
-                    count++;
-            }
-        return count;
-    }
-};
-
-class MineSweeper{
-    MineBoard mineBoard;
-    char board[ROW_SIZE][COLUMN_SIZE];
-    bool minesGenerated;
-    int hiddenMines;
-    int hiddenCells;
-
-    public:
-    void resetMineSweeper(){
-        mineBoard.resetMineBoard();
-        minesGenerated = false;
-        hiddenMines = NO_OF_MINES;
-        hiddenCells = (ROW_SIZE * COLUMN_SIZE) - NO_OF_MINES;
-        for(int i=0; i<ROW_SIZE; i++)
-            for(int j=0; j<COLUMN_SIZE; j++)
-                board[i][j] = HIDDEN_CELL;
+        tile[row][col].content == UNKNOWN;
     }
 
     bool isGameLost(){
@@ -106,56 +117,64 @@ class MineSweeper{
     }
 
     bool isGameWon(){
-        return hiddenCells == 0;
+        return hiddenTiles == 0;
     }
 
     void makeMove(int row, int col){
         if(!minesGenerated){
-            mineBoard.generateMines(row, col);
+            generateMines(row, col);
             minesGenerated = true;
         }
-        else if(board[row][col] == FLAGGED_CELL){
-            cout << "Remove Flag to open cell!\n";
+        else if(tile[row][col].state == FLAGGED){
+            cout << "Remove Flag to open tile!\n";
             return;
         }
-        else if(mineBoard.isMine(row, col)){
+        else if(tile[row][col].content == MINE){
             hiddenMines--;
             return;
         }
-        openCell(row, col);
+        openTile(row, col);
     }
 
-    void openCell(int row, int col){
-        if(board[row][col] != HIDDEN_CELL && board[row][col] != FLAGGED_CELL)
+    void openTile(int row, int col){
+        if(tile[row][col].state == VISIBLE)
             return;
-        int adjacentMines = mineBoard.getAdjacentMines(row, col);
-        hiddenCells--;
+        int adjacentMines = adjacentTilesWithMines(row, col);
+        hiddenTiles--;
+        tile[row][col].state = VISIBLE;
         if(adjacentMines > 0){
-            board[row][col] = '0' + adjacentMines;
+            tile[row][col].content = NUMBER;
+            tile[row][col].adjacentMines = adjacentMines;
+            updateTileName(row, col);
             return;
         }
-        board[row][col] = ' ';
+        tile[row][col].content = EMPTY;
+        updateTileName(row, col);
         for(int i=-1; i<=1; i++)
             for(int j=-1; j<=1; j++){
                 if(i==0 && j==0)
                     continue;
                 if(validLocation(row+i, col+j))
-                    openCell(row+i, col+j);
+                    openTile(row+i, col+j);
         }
     }
 
-    void placeFlag(int row, int col){
-        if(board[row][col] == HIDDEN_CELL)
-            board[row][col] = FLAGGED_CELL;
-        else if(board[row][col] == FLAGGED_CELL)
-            board[row][col] = HIDDEN_CELL;
+    void toggleFlag(int row, int col){
+        if(tile[row][col].state == HIDDEN)
+            tile[row][col].state = FLAGGED;
+        else if(tile[row][col].state == FLAGGED)
+            tile[row][col].state = HIDDEN;
+        updateTileName(row, col);
     }
 
     void showAllMines(){
         for(int i=0; i< ROW_SIZE; i++)
             for(int j=0; j< COLUMN_SIZE; j++)
-                if(mineBoard.isMine(i,j))
-                    board[i][j] = '*';
+                if(tile[i][j].content == MINE){
+                    tile[i][j].state = VISIBLE;
+                    updateTileName(i,j);
+                }
+                    
     }
 
     void printBoard(){
@@ -164,7 +183,7 @@ class MineSweeper{
         for(int i=0; i<ROW_SIZE; i++){
             cout << i+1 << " | ";
             for(int j=0; j<COLUMN_SIZE; j++)
-                cout << board[i][j] << " ";
+                cout << tile[i][j].name << " ";
             cout << "|" << endl;
         }
         cout << "  =====================\n";
@@ -199,10 +218,10 @@ class GameManager{
         while(!gameOver){
             cout << "Enter Row and Column number: ";
             cin >> row >> col;
-            if(validLocation(row-1, col-1))
+            if(mineSweeper.validLocation(row-1, col-1))
                 mineSweeper.makeMove(row-1, col-1);
-            else if(validLocation(-row-1, -col-1))
-                mineSweeper.placeFlag(-row-1, -col-1);
+            else if(mineSweeper.validLocation(-row-1, -col-1))
+                mineSweeper.toggleFlag(-row-1, -col-1);
             else{
                 cout << "Invalid Row or Column!\n";
                 continue;
@@ -227,14 +246,14 @@ class GameManager{
 
     void showRulesAndInfo(){
         cout << "\n   Rules\n";
-        cout << "1. The board is divided into cells, with mines randomly distributed.\n";
-        cout << "2. To win, you need to open all the cells.\n";
-        cout << "3. The number on a cell shows the number of mines adjacent to it. Using this information, you can determine cells that are safe, and cells that contain mines.\n";
+        cout << "1. The board is divided into tiles, with mines randomly distributed.\n";
+        cout << "2. To win, you need to open all the tiles.\n";
+        cout << "3. The number on a tile shows the number of mines adjacent to it. Using this information, you can determine tiles that are safe, and tiles that contain mines.\n";
         cout << "4. Interact, evolve and enjoy!\n";
 
         cout << "\n   How to Play\n";
-        cout << "1. Player will Input the row and column of the cell which they want to open.\n";
-        cout << "2. Player can place or remove flags on hidden cells by adding a (-) sign to row and column values.\n";
+        cout << "1. Player will Input the row and column of the tile which they want to open.\n";
+        cout << "2. Player can place or remove flags on hidden tiles by adding a (-) sign to row and column values.\n";
         cout << "\nPress any key to continue..";
         cin >> input;
     }

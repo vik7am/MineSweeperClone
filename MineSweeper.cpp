@@ -3,67 +3,51 @@ using namespace std;
 #define ROW_SIZE 9
 #define COLUMN_SIZE 9
 #define NO_OF_MINES 10
-#define HIDDEN_TILE '-'
-#define FLAGGED_TILE '#'
-#define EMPTY_TILE ' '
-#define NUMBER_TILE '0'
-
 
 enum TileState{HIDDEN, FLAGGED, VISIBLE};
-enum TileContent{UNKNOWN, EMPTY, NUMBER, MINE};
+enum TileType{UNKNOWN, EMPTY, NUMBER, MINE};
 
 class Tile{
     public:
     char name;
     short adjacentMines;
     TileState state;
-    TileContent content;
-    void reset(){
+    TileType type;
+
+    void initializeTile(){
         state = HIDDEN;
-        content = UNKNOWN;
+        type = UNKNOWN;
         name = '-';
+        adjacentMines = 0;
     }
 };
 
 class Board{
-    public:
+    protected:
     Tile tile[ROW_SIZE][COLUMN_SIZE];
-    
-    void resetBoard(){
+
+    public:
+    void initializeBoard(){
         for(int i=0; i< ROW_SIZE; i++)
             for(int j=0; j< COLUMN_SIZE; j++)
-                tile[i][j].reset();
+                tile[i][j].initializeTile();
     }
-    /*void updateTileState(int row, int col, TileState state){
-        tile[row][col].state = state;
-        if(state == HIDDEN)
-            tile[row][col].name = HIDDEN_TILE;
-        else if(state == FLAGGED)
-            tile[row][col].name = FLAGGED_TILE;
-    }
-    void updateTileContent(int row, int col, TileContent content, int mines){
-        tile[row][col].content = content;
-        if(content == EMPTY)
-            tile[row][col].name = EMPTY_TILE;
-        else if(content == NUMBER)
-            tile[row][col].name = '0' + mines;
-        else if(content == MINE)
-            tile[row][col].name = '*';
-    }*/
+
     void updateTileName(int row, int col){
-        char name = HIDDEN_TILE;
+        char name = '-';
         switch(tile[row][col].state){
-            case HIDDEN: name = HIDDEN_TILE; break;
-            case FLAGGED: name = FLAGGED_TILE; break;
+            case HIDDEN: name = '-'; break;
+            case FLAGGED: name = '#'; break;
             case VISIBLE:
-                switch(tile[row][col].content){
-                    case EMPTY: name = EMPTY_TILE; break;
-                    case NUMBER: name = NUMBER_TILE+tile[row][col].adjacentMines; break;
+                switch(tile[row][col].type){
+                    case EMPTY: name = ' '; break;
+                    case NUMBER: name = '0' + tile[row][col].adjacentMines; break;
                     case MINE: name = '*'; break;
                 }
         }
         tile[row][col].name = name;
     }
+
     int adjacentTilesWithMines(int row, int col){
         int count = 0;
         for(int i=-1; i<=1; i++)
@@ -71,15 +55,28 @@ class Board{
                 if(i==0 && j==0)
                     continue;
                 if(validLocation(row+i, col+j))
-                    if(tile[row+i][col+j].content == MINE)
+                    if(tile[row+i][col+j].type == MINE)
                         count++;
             }
         return count;
     }
+
     bool validLocation(int row, int col){
         if(row>=0 && col>=0 && row<ROW_SIZE && col<COLUMN_SIZE)
             return true;
         return false;
+    }
+
+    void printBoard(){
+        cout << "\n    1 2 3 4 5 6 7 8 9\n";
+        cout << "  =====================\n";
+        for(int i=0; i<ROW_SIZE; i++){
+            cout << i+1 << " | ";
+            for(int j=0; j<COLUMN_SIZE; j++)
+                cout << tile[i][j].name << " ";
+            cout << "|" << endl;
+        }
+        cout << "  =====================\n";
     }
 };
 
@@ -89,8 +86,8 @@ class MineSweeper : public Board{
     int hiddenTiles;
 
     public:
-    void resetMineSweeper(){
-        resetBoard();
+    void initializeMineSweeper(){
+        initializeBoard();
         minesGenerated = false;
         hiddenMines = NO_OF_MINES;
         hiddenTiles = (ROW_SIZE * COLUMN_SIZE) - NO_OF_MINES;
@@ -99,25 +96,19 @@ class MineSweeper : public Board{
     void generateMines(int row, int col){
         int count = 0;
         int i,j;
-        tile[row][col].content = MINE;
+        //Placing mine at the tile selected by player to prevent mine spawn
+        tile[row][col].type = MINE; 
         srand(time(0));
         while(count < NO_OF_MINES){
             i = rand()%ROW_SIZE;
             j = rand()%COLUMN_SIZE;
-            if(tile[i][j].content == MINE)
+            if(tile[i][j].type == MINE)
                 continue;
-            tile[i][j].content = MINE;
+            tile[i][j].type = MINE;
             count++;
         }
-        tile[row][col].content == UNKNOWN;
-    }
-
-    bool isGameLost(){
-        return hiddenMines < NO_OF_MINES;
-    }
-
-    bool isGameWon(){
-        return hiddenTiles == 0;
+        // removing mine from the tile selected by player
+        tile[row][col].type == UNKNOWN;
     }
 
     void makeMove(int row, int col){
@@ -129,7 +120,7 @@ class MineSweeper : public Board{
             cout << "Remove Flag to open tile!\n";
             return;
         }
-        else if(tile[row][col].content == MINE){
+        else if(tile[row][col].type == MINE){
             hiddenMines--;
             return;
         }
@@ -143,12 +134,12 @@ class MineSweeper : public Board{
         hiddenTiles--;
         tile[row][col].state = VISIBLE;
         if(adjacentMines > 0){
-            tile[row][col].content = NUMBER;
+            tile[row][col].type = NUMBER;
             tile[row][col].adjacentMines = adjacentMines;
             updateTileName(row, col);
             return;
         }
-        tile[row][col].content = EMPTY;
+        tile[row][col].type = EMPTY;
         updateTileName(row, col);
         for(int i=-1; i<=1; i++)
             for(int j=-1; j<=1; j++){
@@ -170,23 +161,18 @@ class MineSweeper : public Board{
     void showAllMines(){
         for(int i=0; i< ROW_SIZE; i++)
             for(int j=0; j< COLUMN_SIZE; j++)
-                if(tile[i][j].content == MINE){
+                if(tile[i][j].type == MINE){
                     tile[i][j].state = VISIBLE;
                     updateTileName(i,j);
                 }
-                    
     }
 
-    void printBoard(){
-        cout << "\n    1 2 3 4 5 6 7 8 9\n";
-        cout << "  =====================\n";
-        for(int i=0; i<ROW_SIZE; i++){
-            cout << i+1 << " | ";
-            for(int j=0; j<COLUMN_SIZE; j++)
-                cout << tile[i][j].name << " ";
-            cout << "|" << endl;
-        }
-        cout << "  =====================\n";
+    bool isGameLost(){
+        return hiddenMines < NO_OF_MINES;
+    }
+
+    bool isGameWon(){
+        return hiddenTiles == 0;
     }
 };
 
@@ -212,7 +198,7 @@ class GameManager{
     }
 
     void startGameLoop(){
-        mineSweeper.resetMineSweeper();
+        mineSweeper.initializeMineSweeper();
         mineSweeper.printBoard();
         gameOver = false;
         while(!gameOver){
